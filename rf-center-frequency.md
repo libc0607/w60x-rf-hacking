@@ -164,6 +164,12 @@ F = 60 MHz * (int + frac/0xFFFFF)
 ```
 最后作为老缝合怪，可以在 arduino 环境中糊出一堆勉强能用的测试代码：  
 ```
+// Notice that 'extern "C"' 
+extern "C" {
+  #include <wm_wifi.h>
+  #include <wm_osal.h>
+}
+
 void _rf_spi_w(int arg)
 {
   *((uint32_t*)0x40011408) = arg << 10;    
