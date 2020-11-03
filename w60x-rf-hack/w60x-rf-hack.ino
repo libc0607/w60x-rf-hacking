@@ -131,7 +131,7 @@ void loop() {
   rate_t.tx_gain = tls_wifi_get_tx_gain_max(rate_t.tx_rate);
   for (int i=0; i<1000; i++) {
     tls_wifi_send_data(NULL, send_data, sizeof(send_data), &rate_t);
-    delayMicroseconds(100);
+    delayMicroseconds(1);
   }
   
   freq++;
