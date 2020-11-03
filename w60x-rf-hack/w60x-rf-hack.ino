@@ -25,6 +25,45 @@ uint8_t send_data[] = {
   0xde, 0xad, 0xbe, 0xef
 };
 
+// usable bw_mhz: 20(default), 10, 5
+// note1: this func assume cpu is running at 80MHz
+// note2: this func affect all devices' clock under APB
+// (e.g. set channel bw to 10MHz & set UART to 115200 ==> you'll get a 57600 UART)
+void w60x_set_wlan_channel_bw(uint32_t bw_mhz)
+{
+  uint32_t reg, clk_mhz;
+  uint8_t wlan_div, bus2_factor; 
+  
+  reg = *((uint32_t*)0x40000710);
+  clk_mhz = bw_mhz * 8;
+  
+  switch(clk_mhz) {
+  case 80:
+    wlan_div = 2;
+    bus2_factor = 4;
+  break;
+  case 40:
+    wlan_div = 4;
+    bus2_factor = 8;
+  break;
+  default:  // 160mhz
+    wlan_div = 1;
+    bus2_factor = 2;
+  break;
+  }
+  
+  reg &= ~(0x00000FF0);
+  reg |= (wlan_div <<4);
+  reg |= (bus2_factor <<8);
+
+  *((uint32_t*)0x40000710) = reg;
+  delayMicroseconds(1);
+  *((uint32_t*)0x40000710) = reg | 0x80000000;
+  delayMicroseconds(1);
+  
+  return;
+}
+
 // arg: 10'b<padding> + 5'b<reg-addr> + 1'b<r/w> + 16'b<reg-data> 
 void _rf_spi_w(int arg)
 {
@@ -80,21 +119,25 @@ void setup() {
   
   
   tls_wifi_change_chanel(0);
-  //tls_wifi_set_listen_mode(1);
-  
+  w60x_set_wlan_channel_bw(10);
+  w60x_set_center_frequency_20mbw(freq);
 }
 
-uint32_t freq = 2412;
+uint32_t freq = 2312;
 
 void loop() {
   tls_wifi_tx_rate_t rate_t;
   rate_t.tx_rate = WM_WIFI_TX_RATEIDX_6M;
   rate_t.tx_gain = tls_wifi_get_tx_gain_max(rate_t.tx_rate);
-  for (int i=0; i<2000; i++) {
+  for (int i=0; i<1000; i++) {
     tls_wifi_send_data(NULL, send_data, sizeof(send_data), &rate_t);
     delayMicroseconds(100);
   }
+  
   freq++;
+  if (freq > 2712)
+    freq = 2312;
+  
   w60x_set_center_frequency_20mbw(freq);
   Serial.println(freq);
 }
